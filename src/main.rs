@@ -1,4 +1,6 @@
 
+use std::mem::zeroed;
+
 use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
 use windows::Win32::Foundation::LPARAM;
 use windows::Win32::Foundation::BOOL;
@@ -27,19 +29,39 @@ unsafe extern "system" fn show_window_info(hwnd: HWND, l_param: LPARAM) -> BOOL 
 
         let mut rect: RECT = RECT::default();
         GetWindowRect(hwnd, &mut rect);
-        // let mut rect: RECT = RECT::default();
-        // GetWindowRect(hwnd, &mut rect);
 
         let is_minimized = IsIconic(hwnd).as_bool();
         let is_maximized = IsZoomed(hwnd).as_bool();
 
-        println!("Title: {}\nClass: {}\nRect: {:?}\nMinimized: {}\nMaximized: {}\n", title.trim(), class_name.trim(), rect, is_minimized, is_maximized);
+
+        let mut window_info: WINDOWINFO = zeroed();
+        window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
+        let result = GetWindowInfo(hwnd, &mut window_info);
+        if matches!(result, Result::Err(_)) {
+            return BOOL::from(true);
+        }
+
+
+        let window_style: WINDOW_STYLE = window_info.dwStyle;
+        let is_popup = window_style & WS_POPUP;
+
+        if is_popup == WS_POPUP {
+            return BOOL::from(true);
+        }
+
+        println!("Title: {}\nClass: {}\nRect: {:?}\nMinimized: {}\nMaximized: {}", title.trim(), class_name.trim(), rect, is_minimized, is_maximized);
+        println!("Info: {:?}", window_info);
+        println!("Popup: {:?}", is_popup);
+
+        println!();
     }
     return BOOL::from(true);
 }
 
 fn main() {
     unsafe {
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        println!("Checking");
         EnumWindows(Some(show_window_info), LPARAM(0));
     }
 
