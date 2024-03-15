@@ -1,25 +1,128 @@
-use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
-use windows::Win32::Foundation::{BOOL, LPARAM};
+use std::mem::zeroed;
 
-use crate::container;
+use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
+use windows::Win32::Foundation::{BOOL, LPARAM, RECT};
+
+use crate::container::{self, Dimension, WindowContainer};
 
 pub fn get_all_windows() -> Vec<container::WindowContainer> {
-    let windows: Vec<container::WindowContainer> = Vec::new();
-    let mut hwnds: Vec<HWND> = Vec::new();
+    let mut windows: Vec<WindowContainer> = Vec::new();
+    let mut handles: Vec<HWND> = Vec::new();
 
-    unsafe { EnumWindows(
-        Some(get_all_windows_hwnd),
-        LPARAM(&mut hwnds as *mut Vec<HWND> as isize))
-    };
+    unsafe { 
+        EnumWindows(
+            Some(EnumWindowsProc),
+            LPARAM(&mut handles as *mut Vec<HWND> as isize)
+        ).unwrap();
+    }
+
+    for handle in handles {
+        let window = WindowContainer::from(handle);
+        println!("{:?}", window);
+    }
 
     windows
 }
 
-extern "system" fn get_all_windows_hwnd(hwnd: HWND, lparam: LPARAM) -> BOOL {
-    // let mut hwnds: Vec<HWND> = lparam as
-    let hwnds = lparam as Vec<HWND>;
+impl From<HWND> for WindowContainer {
+    fn from(hwnd: HWND) -> Self {
+        unsafe {
+            let mut buffer: [u16; 512] = [0; 512];
+            let name_len = GetWindowTextW(hwnd, &mut buffer) as usize;
+            let name = String::from_utf16_lossy(&buffer[0..name_len]);
+            let is_visible = IsWindowVisible(hwnd).as_bool();
+            let is_minimized = IsIconic(hwnd).as_bool();
+            let is_maximized = IsZoomed(hwnd).as_bool();
+            
+            let mut rect: RECT = RECT::default();
+            GetWindowRect(hwnd, &mut rect).unwrap();
+
+            let mut window_info: WINDOWINFO = zeroed();
+            window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
+            GetWindowInfo(hwnd, &mut window_info).unwrap();
+        
+            let window_style: WINDOW_STYLE = window_info.dwStyle;
+            let is_popup = window_style & WS_POPUP == WS_POPUP;
+
+
+            WindowContainer {
+                name: name, 
+                size: Dimension { 
+                    width: rect.right - rect.left, 
+                    height: rect.bottom - rect.top 
+                } 
+            }
+        }
+    }
+}
+
+
+// fn is_window(hwnd: HWND) -> bool {
+
+//     if IsWindowVisible(hwnd).as_bool() {
+//         return false;
+//     }
+
+//     true
+
+//     let mut buffer: [u16; 512] = [0; 512];
+//     let mut title = String::new();
+//     let mut class_name = String::new();
     
-    // &mut Vec<HWND> as &mut Vec<HWND>;?
+//     if IsWindowVisible(hwnd).as_bool() {
+//         let result = GetWindowTextW(hwnd, &mut buffer);
+//         title = String::from_utf16_lossy(&buffer);
+
+//         if result == 0 {
+//             return BOOL::from(true); // continue enumeration
+//         }
+
+//         GetClassNameW(hwnd, &mut buffer);
+//         class_name = String::from_utf16_lossy(&buffer);
+
+//         if class_name.contains("IME") || class_name.contains("CoreWindow") {
+//             return BOOL::from(true); // continue enumeration
+//         }
+
+//         let mut rect: RECT = RECT::default();
+//         GetWindowRect(hwnd, &mut rect);
+
+//         let is_minimized = IsIconic(hwnd).as_bool();
+//         let is_maximized = IsZoomed(hwnd).as_bool();
+
+
+//         let mut window_info: WINDOWINFO = zeroed();
+//         window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
+//         let result = GetWindowInfo(hwnd, &mut window_info);
+//         if matches!(result, Result::Err(_)) {
+//             return BOOL::from(true);
+//         }
+
+
+//         let window_style: WINDOW_STYLE = window_info.dwStyle;
+//         let is_popup = window_style & WS_POPUP;
+
+//         if is_popup == WS_POPUP {
+//             return BOOL::from(true);
+//         }
+
+//         println!("Title: {}\nClass: {}\nRect: {:?}\nMinimized: {}\nMaximized: {}", title.trim(), class_name.trim(), rect, is_minimized, is_maximized);
+//         println!("Info: {:?}", window_info);
+//         println!("Popup: {:?}", is_popup);
+
+//         println!();
+//     }
+//     return BOOL::from(true);
+// } 
+//     true
+// }
+
+
+unsafe extern "system" fn EnumWindowsProc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let LPARAM(ptr) = lparam;
+    let mut handles = &mut *(ptr as *mut Vec<HWND>);
+    handles.push(hwnd);
+
     BOOL::from(true)
 }
 

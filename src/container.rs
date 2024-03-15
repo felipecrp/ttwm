@@ -1,8 +1,8 @@
 
-
-struct Dimension {
-    width: u8,
-    height: u8
+#[derive(Debug)]
+pub struct Dimension {
+    pub width: i32,
+    pub height: i32
 }
 
 struct Monitor {
@@ -24,9 +24,10 @@ struct WindowGroupContainer {
     containers: Vec<Container>
 }
 
+#[derive(Debug)]
 pub struct WindowContainer {
-    name: String,
-    size: Dimension
+    pub name: String,
+    pub size: Dimension
 }
 
 pub fn test() -> () {
