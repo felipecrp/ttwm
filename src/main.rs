@@ -2,12 +2,13 @@ mod api;
 mod container;
 mod window;
 
-use crate::window::Window;
-
+use api::win::WinWindowManager;
+use window::WindowManager;
 
 fn main() {
-    let windows = api::get_all_windows();    
+    let window_manager = WinWindowManager;
+    let windows = window_manager.get_windows();
     for window in windows {
-        println!("{}", crate::api::win::Window::from(window).get_name())
+        println!("{}", window.get_name());
     }
 }

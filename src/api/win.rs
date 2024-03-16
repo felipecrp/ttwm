@@ -4,17 +4,39 @@ use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
 use windows::Win32::Foundation::{BOOL, LPARAM, RECT};
 
 use crate::container::WindowShape;
+use crate::window::{Window, WindowManager};
 
-
-pub struct Window {
+pub struct WinWindow {
     window_handler: WindowHandler,
     shape: WindowShape
 }
 
-impl From<WindowHandler> for Window {
+impl Window for WinWindow {
+    fn get_name(&self) -> String {
+        self.window_handler.get_name()
+    }
+    
+    fn is_maximized(&self) -> bool {
+        self.window_handler.is_maximized()
+    }
+    
+    fn is_minimized(&self) -> bool {
+        self.window_handler.is_minimized()
+    }
+    
+    fn get_shape(&self) -> WindowShape {
+        todo!()
+    }
+    
+    fn set_shape(&self, shape: WindowShape) -> () {
+        todo!()
+    }
+}
+
+impl From<WindowHandler> for WinWindow {
     fn from(hwnd: WindowHandler) -> Self {
         let shape = hwnd.get_shape();
-        Window {
+        WinWindow {
             window_handler: hwnd,
             shape: WindowShape {
                 x: shape.x,
@@ -25,6 +47,7 @@ impl From<WindowHandler> for Window {
         }
     }
 }
+
 
 pub struct WindowHandler(HWND);
 
@@ -83,30 +106,6 @@ impl WindowHandler {
     }
 }
 
-impl crate::window::Window for Window {
-    fn get_name(&self) -> String {
-        self.window_handler.get_name()
-    }
-    
-    fn is_maximized(&self) -> bool {
-        self.window_handler.is_maximized()
-    }
-    
-    fn is_minimized(&self) -> bool {
-        self.window_handler.is_minimized()
-    }
-    
-    fn get_shape(&self) -> WindowShape {
-        todo!()
-    }
-    
-    fn set_shape(&self, shape: WindowShape) -> &Self {
-        todo!()
-    }
-
-
-}
-
 impl From<HWND> for WindowHandler {
     fn from(hwnd: HWND) -> Self {
         WindowHandler(hwnd)
@@ -114,25 +113,46 @@ impl From<HWND> for WindowHandler {
 }
 
 
-/// Manage the windows
-struct WindowsManager {
-    window_handles: Vec<WindowHandler>
+pub struct WinWindowManager;
+
+impl WindowManager for WinWindowManager {
+    fn get_windows(&self) -> Vec<Box<dyn Window>> {
+        let mut windows = Vec::<Box<dyn Window>>::new();
+
+        for window_handle in get_all_windows() {
+            let window = WinWindow::from(window_handle);
+            windows.push(Box::new(window));
+        }
+
+        windows
+    }
 }
+
+// Option<&WindowHandler>
+
+
+// impl WindowManager for WinWindowManager {
+//     fn get_windows(&self) -> Vec<Box<dyn Window>> {
+//         let collect = get_all_windows().into_iter()
+//             .filter(|window_handle| window_handle.is_window())
+//             // .map(|window_handle| <dyn Window>::from(window_handle))
+//             .collect();
+//     }
+// }
 
 pub fn get_all_windows() -> Vec<WindowHandler> {
     let mut window_handles: Vec<WindowHandler> = Vec::new();
     unsafe { EnumWindows(
-        Some(EnumWindowsProc),
+        Some(enum_windows_proc),
         LPARAM(&mut window_handles as *mut Vec<WindowHandler> as isize)
     ).unwrap() };
     window_handles.into_iter()
         .filter(|window_handle| window_handle.is_window())
-        // .map(|window_handle| Window::from(window_handle))
         .collect()
 }
 
-extern "system" fn EnumWindowsProc(hwnd: HWND, lparam: LPARAM) -> BOOL {
-    let mut handles = unsafe { &mut *(lparam.0 as *mut Vec<WindowHandler>) };
+extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let handles = unsafe { &mut *(lparam.0 as *mut Vec<WindowHandler>) };
     handles.push(WindowHandler(hwnd));
     BOOL::from(true)
 }
