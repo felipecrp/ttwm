@@ -1,4 +1,12 @@
 
+
+pub struct WindowShape {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32
+}
+
 #[derive(Debug)]
 pub struct Dimension {
     pub width: i32,

@@ -3,58 +3,171 @@ use std::mem::zeroed;
 use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
 use windows::Win32::Foundation::{BOOL, LPARAM, RECT};
 
-use crate::container::{self, Dimension, WindowContainer};
+use crate::container::WindowShape;
 
-pub fn get_all_windows() -> Vec<container::WindowContainer> {
-    let mut windows: Vec<WindowContainer> = Vec::new();
-    let mut handles: Vec<HWND> = Vec::new();
 
-    unsafe { 
-        EnumWindows(
-            Some(EnumWindowsProc),
-            LPARAM(&mut handles as *mut Vec<HWND> as isize)
-        ).unwrap();
-    }
-
-    for handle in handles {
-        let window = WindowContainer::from(handle);
-        println!("{:?}", window);
-    }
-
-    windows
+pub struct Window {
+    window_handler: WindowHandler,
+    shape: WindowShape
 }
 
-impl From<HWND> for WindowContainer {
-    fn from(hwnd: HWND) -> Self {
-        unsafe {
-            let mut buffer: [u16; 512] = [0; 512];
-            let name_len = GetWindowTextW(hwnd, &mut buffer) as usize;
-            let name = String::from_utf16_lossy(&buffer[0..name_len]);
-            let is_visible = IsWindowVisible(hwnd).as_bool();
-            let is_minimized = IsIconic(hwnd).as_bool();
-            let is_maximized = IsZoomed(hwnd).as_bool();
-            
-            let mut rect: RECT = RECT::default();
-            GetWindowRect(hwnd, &mut rect).unwrap();
-
-            let mut window_info: WINDOWINFO = zeroed();
-            window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
-            GetWindowInfo(hwnd, &mut window_info).unwrap();
-        
-            let window_style: WINDOW_STYLE = window_info.dwStyle;
-            let is_popup = window_style & WS_POPUP == WS_POPUP;
-
-
-            WindowContainer {
-                name: name, 
-                size: Dimension { 
-                    width: rect.right - rect.left, 
-                    height: rect.bottom - rect.top 
-                } 
+impl From<WindowHandler> for Window {
+    fn from(hwnd: WindowHandler) -> Self {
+        let shape = hwnd.get_shape();
+        Window {
+            window_handler: hwnd,
+            shape: WindowShape {
+                x: shape.x,
+                y: shape.y,
+                width: shape.width,
+                height: shape.height
             }
         }
     }
 }
+
+pub struct WindowHandler(HWND);
+
+impl WindowHandler {
+    fn get_name(&self) -> String {
+        let mut buffer: [u16; 512] = [0; 512];
+        let length = unsafe { GetWindowTextW(self.0, &mut buffer) } as usize;
+        String::from_utf16_lossy(&buffer[0..length])
+    }
+
+    fn is_maximized(&self) -> bool {
+        unsafe { IsZoomed(self.0).as_bool() }
+    }
+
+    fn is_minimized(&self) -> bool {
+        unsafe { IsIconic(self.0).as_bool() }
+    }
+
+    // Return the window info 
+    fn get_window_info(&self) -> WINDOWINFO {
+        let mut window_info: WINDOWINFO = unsafe { zeroed() };
+        window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
+        unsafe { GetWindowInfo(self.0, &mut window_info).unwrap() };
+        window_info
+    }
+
+    // Return the window style
+    fn get_window_style(&self) -> WINDOW_STYLE {
+        self.get_window_info().dwStyle
+    }
+
+    // Return true if the window is a popup
+    fn is_popup(&self) -> bool {
+        self.get_window_style() & WS_POPUP == WS_POPUP
+    }
+
+    // Return true if the window is visible
+    fn is_window_visible(&self) -> bool {
+        unsafe { IsWindowVisible(self.0).as_bool() } 
+    }
+
+    /// Return true if the handle is a window
+    fn is_window(&self) -> bool {
+        self.is_window_visible() && !self.is_popup()
+    }
+
+    fn get_shape(&self) -> WindowShape {
+        let mut rect: RECT = RECT::default();
+        unsafe { GetWindowRect(self.0, &mut rect).unwrap() };
+        WindowShape {
+            x: rect.left,
+            y: rect.top,
+            width: rect.right - rect.left,
+            height: rect.bottom - rect.top
+        }
+    }
+}
+
+impl crate::window::Window for Window {
+    fn get_name(&self) -> String {
+        self.window_handler.get_name()
+    }
+    
+    fn is_maximized(&self) -> bool {
+        self.window_handler.is_maximized()
+    }
+    
+    fn is_minimized(&self) -> bool {
+        self.window_handler.is_minimized()
+    }
+    
+    fn get_shape(&self) -> WindowShape {
+        todo!()
+    }
+    
+    fn set_shape(&self, shape: WindowShape) -> &Self {
+        todo!()
+    }
+
+
+}
+
+impl From<HWND> for WindowHandler {
+    fn from(hwnd: HWND) -> Self {
+        WindowHandler(hwnd)
+    }
+}
+
+
+/// Manage the windows
+struct WindowsManager {
+    window_handles: Vec<WindowHandler>
+}
+
+pub fn get_all_windows() -> Vec<WindowHandler> {
+    let mut window_handles: Vec<WindowHandler> = Vec::new();
+    unsafe { EnumWindows(
+        Some(EnumWindowsProc),
+        LPARAM(&mut window_handles as *mut Vec<WindowHandler> as isize)
+    ).unwrap() };
+    window_handles.into_iter()
+        .filter(|window_handle| window_handle.is_window())
+        // .map(|window_handle| Window::from(window_handle))
+        .collect()
+}
+
+extern "system" fn EnumWindowsProc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let mut handles = unsafe { &mut *(lparam.0 as *mut Vec<WindowHandler>) };
+    handles.push(WindowHandler(hwnd));
+    BOOL::from(true)
+}
+
+// impl From<HWND> for WindowHandler {
+//     fn from(hwnd: HWND) -> Self {
+//         unsafe {
+//             let mut buffer: [u16; 512] = [0; 512];
+//             let name_len = GetWindowTextW(hwnd, &mut buffer) as usize;
+//             let name = String::from_utf16_lossy(&buffer[0..name_len]);
+//             let is_visible = IsWindowVisible(hwnd).as_bool();
+//             let is_minimized = IsIconic(hwnd).as_bool();
+//             let is_maximized = IsZoomed(hwnd).as_bool();
+            
+//             let mut rect: RECT = RECT::default();
+//             GetWindowRect(hwnd, &mut rect).unwrap();
+
+//             let mut window_info: WINDOWINFO = zeroed();
+//             window_info.cbSize = std::mem::size_of::<WINDOWINFO>() as u32;
+//             GetWindowInfo(hwnd, &mut window_info).unwrap();
+        
+//             let window_style: WINDOW_STYLE = window_info.dwStyle;
+//             let is_popup = window_style & WS_POPUP == WS_POPUP;
+
+
+//             WindowContainer {
+//                 name: name, 
+//                 size: Dimension { 
+//                     width: rect.right - rect.left, 
+//                     height: rect.bottom - rect.top 
+//                 } 
+//             }
+//         }
+//     }
+// }
 
 
 // fn is_window(hwnd: HWND) -> bool {
@@ -118,13 +231,7 @@ impl From<HWND> for WindowContainer {
 // }
 
 
-unsafe extern "system" fn EnumWindowsProc(hwnd: HWND, lparam: LPARAM) -> BOOL {
-    let LPARAM(ptr) = lparam;
-    let mut handles = &mut *(ptr as *mut Vec<HWND>);
-    handles.push(hwnd);
 
-    BOOL::from(true)
-}
 
 
 // use std::mem::zeroed;
@@ -186,8 +293,8 @@ unsafe extern "system" fn EnumWindowsProc(hwnd: HWND, lparam: LPARAM) -> BOOL {
 //     return BOOL::from(true);
 // }
 
-fn main() {
-    container::test();
+// fn main() {
+//     container::test();
     // unsafe {
     //     std::thread::sleep(std::time::Duration::from_millis(1000));
     //     println!("Checking");
@@ -234,4 +341,4 @@ fn main() {
     //     let _result = MoveWindow(cur_app.window, 10, 10, 700, 700, true); 
     // }
 
-}
+// }

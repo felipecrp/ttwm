@@ -1,10 +1,10 @@
-mod win;
 
-use crate::container;
+pub mod win;
+
 
 /**
  * Return all windows
  */
-pub fn get_all_windows() -> Vec<container::WindowContainer> {
+pub fn get_all_windows() -> Vec<win::WindowHandler> {
     win::get_all_windows()
 }
