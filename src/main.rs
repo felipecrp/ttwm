@@ -17,6 +17,6 @@ fn main() {
     for window in windows {
         println!("{}", window.get_name());
         workspace.add_window(window);
-        thread::sleep(time::Duration::from_millis(1000));
+        // thread::sleep(time::Duration::from_millis(1000));
     }
 }

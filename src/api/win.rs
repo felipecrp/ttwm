@@ -112,7 +112,8 @@ impl WindowHandler {
     }
     
     fn mve(&self, geo: (i32, i32, i32, i32)) -> () {
-        unsafe { MoveWindow(self.0, geo.0, geo.1, geo.2, geo.3, true) }; 
+        // unsafe { MoveWindow(self.0, geo.0, geo.1, geo.2, geo.3, true) }; 
+        unsafe { let _ = SetWindowPos(self.0, HWND_TOP, geo.0, geo.1, geo.2, geo.3, SWP_SHOWWINDOW|SWP_NOSENDCHANGING); }; 
     }
 }
 
