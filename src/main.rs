@@ -1,22 +1,16 @@
-mod api;
+mod desktop;
+mod workspace;
 mod container;
+mod layout;
 mod window;
+mod geometry;
+mod api;
 
-
-use std::{thread, time};
-
+use crate::workspace::Workspace;
 use api::win::WinWindowManager;
-use container::Workspace;
+use desktop::Desktop;
 use window::WindowManager;
 
 fn main() {
-    let mut workspace = Workspace::new();
-
-    let window_manager = WinWindowManager::new();
-    let windows = window_manager.get_windows();
-    for window in windows {
-        println!("{}", window.get_name());
-        workspace.add_window(window);
-        // thread::sleep(time::Duration::from_millis(1000));
-    }
+    let desktop = Desktop::new();
 }

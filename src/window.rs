@@ -1,4 +1,9 @@
-use crate::container::WindowShape;
+use  crate::geometry::Shape;
+/// Represent a Generic Window Manager
+pub trait WindowManager {
+    /// Return all available windows
+    fn get_windows(&self) -> Vec<Box<dyn Window>>;
+}
 
 /// Represent a Generic Window
 pub trait Window {
@@ -12,16 +17,11 @@ pub trait Window {
     fn is_minimized(&self) -> bool;
 
     /// Return the window shape
-    fn get_shape(&self) -> WindowShape;
+    fn get_shape(&self) -> Shape;
 
     /// Set the window shape
-    fn set_shape(&self, shape: WindowShape) -> ();
+    fn set_shape(&self, geometry: Shape) -> ();
 
     fn mve(&self, geo: (i32, i32, i32, i32)) -> ();
 }
 
-/// Represent a Generic Window Manager
-pub trait WindowManager {
-    /// Return all available windows
-    fn get_windows(&self) -> Vec<Box<dyn Window>>;
-}

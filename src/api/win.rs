@@ -5,12 +5,12 @@ use std::mem::zeroed;
 use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
 use windows::Win32::Foundation::{BOOL, LPARAM, RECT};
 
-use crate::container::WindowShape;
+use crate::geometry::Shape;
 use crate::window::{Window, WindowManager};
 
 pub struct WinWindow {
     window_handler: WindowHandler,
-    shape: WindowShape
+    geometry: Shape
 }
 
 impl Window for WinWindow {
@@ -26,11 +26,11 @@ impl Window for WinWindow {
         self.window_handler.is_minimized()
     }
     
-    fn get_shape(&self) -> WindowShape {
+    fn get_shape(&self) -> Shape {
         todo!()
     }
     
-    fn set_shape(&self, _shape: WindowShape) -> () {
+    fn set_shape(&self, _shape: Shape) -> () {
         todo!()
     }
     
@@ -44,7 +44,7 @@ impl From<WindowHandler> for WinWindow {
         let shape = hwnd.get_shape();
         WinWindow {
             window_handler: hwnd,
-            shape: WindowShape {
+            geometry: Shape {
                 x: shape.x,
                 y: shape.y,
                 width: shape.width,
@@ -100,10 +100,10 @@ impl WindowHandler {
         self.is_window_visible() && !self.is_popup()
     }
 
-    fn get_shape(&self) -> WindowShape {
+    fn get_shape(&self) -> Shape {
         let mut rect: RECT = RECT::default();
         unsafe { GetWindowRect(self.0, &mut rect).unwrap() };
-        WindowShape {
+        Shape {
             x: rect.left,
             y: rect.top,
             width: rect.right - rect.left,
