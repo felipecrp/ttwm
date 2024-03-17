@@ -1,3 +1,5 @@
+use crate::window::Window;
+
 
 
 pub struct WindowShape {
@@ -7,60 +9,65 @@ pub struct WindowShape {
     pub height: i32
 }
 
-#[derive(Debug)]
-pub struct Dimension {
-    pub width: i32,
-    pub height: i32
+pub struct WindowGeometry(Coordinate, Coordinate);
+
+pub struct Coordinate {
+    x: i32,
+    y: i32
 }
 
-struct Monitor {
-    size: Dimension,
-    workspaces: Vec<Workspace>
+pub struct Workspace {
+    containers: Vec<WindowContainer>
 }
 
-struct Workspace {
-    windows: Container
+impl Workspace {
+    pub fn new() -> Self {
+        let mut containers: Vec<WindowContainer> = Vec::new();
+        containers.push(WindowContainer::new());
+        
+        Self {
+            containers: containers
+        }
+    }
+    
+    pub fn add_window(&mut self, window: Box<dyn Window>) -> () {
+        let container = &mut self.containers[0];
+        let children = &mut container.children;
+        children.push(Container::Window(window));
+        container.update();
+    }
+}
+
+struct WindowContainer {
+    children: Vec<Container>
+}
+
+impl WindowContainer {
+    fn new() -> Self {
+        Self {
+            children: Vec::new()
+        }
+    }
+    
+    fn update(&self) -> () {
+        let max_width = 1920;
+        let width = max_width / self.children.len() as i32;
+        let mut w0 = 0i32;
+        for child in &self.children {
+            let w1 = w0 + width;
+            match child {
+                Container::Container(_) => (),
+                Container::Window(window) => {
+                    println!("{}", window.get_name());
+                    window.mve((w0, 0, width, 1080));
+                } 
+            }
+            w0 = w1;
+        }
+    }
 }
 
 enum Container {
-    Window(WindowContainer),
-    WindowGroup(WindowGroupContainer),
-}
-
-struct WindowGroupContainer {
-    size: Dimension,
-    containers: Vec<Container>
-}
-
-#[derive(Debug)]
-pub struct WindowContainer {
-    pub name: String,
-    pub size: Dimension
-}
-
-pub fn test() -> () {
-    let mut window1 = WindowContainer {
-        name: String::from("window1"),
-        size: Dimension { width: 10, height: 10  } 
-    };
-
-    let mut window2 = WindowContainer { 
-        name: String::from("window2"),
-        size: Dimension { width: 10, height: 10  } 
-    };
-
-    let mut group1 = WindowGroupContainer {
-        size: Dimension { width: 10, height: 10  },
-        containers: Vec::new()
-    };
-
-    let mut group2 = WindowGroupContainer {
-        size: Dimension { width: 10, height: 10  },
-        containers: Vec::new()
-    };
-    
-    group1.containers.push(Container::Window(window1));
-    group2.containers.push(Container::Window(window2));
-    group1.containers.push(Container::WindowGroup(group2));
-
+    Container(WindowContainer),
+    Window(Box<dyn Window>)
 }

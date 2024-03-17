@@ -16,6 +16,8 @@ pub trait Window {
 
     /// Set the window shape
     fn set_shape(&self, shape: WindowShape) -> ();
+
+    fn mve(&self, geo: (i32, i32, i32, i32)) -> ();
 }
 
 /// Represent a Generic Window Manager

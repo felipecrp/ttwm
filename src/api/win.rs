@@ -1,3 +1,5 @@
+
+use std::collections::HashMap;
 use std::mem::zeroed;
 
 use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
@@ -28,8 +30,12 @@ impl Window for WinWindow {
         todo!()
     }
     
-    fn set_shape(&self, shape: WindowShape) -> () {
+    fn set_shape(&self, _shape: WindowShape) -> () {
         todo!()
+    }
+    
+    fn mve(&self, geo: (i32, i32, i32, i32)) -> () {
+        self.window_handler.mve(geo);
     }
 }
 
@@ -104,6 +110,10 @@ impl WindowHandler {
             height: rect.bottom - rect.top
         }
     }
+    
+    fn mve(&self, geo: (i32, i32, i32, i32)) -> () {
+        unsafe { MoveWindow(self.0, geo.0, geo.1, geo.2, geo.3, true) }; 
+    }
 }
 
 impl From<HWND> for WindowHandler {
@@ -113,7 +123,17 @@ impl From<HWND> for WindowHandler {
 }
 
 
-pub struct WinWindowManager;
+pub struct WinWindowManager {
+    pub(crate) windows: HashMap<WindowHandler, WinWindow>
+}
+
+impl WinWindowManager {
+    pub fn new() -> Self {
+        Self {
+            windows: HashMap::<WindowHandler, WinWindow>::new()
+        }
+    }
+}
 
 impl WindowManager for WinWindowManager {
     fn get_windows(&self) -> Vec<Box<dyn Window>> {
