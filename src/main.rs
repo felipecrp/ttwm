@@ -3,14 +3,20 @@ mod workspace;
 mod container;
 mod layout;
 mod window;
+mod window_event;
 mod geometry;
 mod api;
 
-use crate::workspace::Workspace;
-use api::win::WinWindowManager;
+use std::{thread, time::Duration};
+
 use desktop::Desktop;
-use window::WindowManager;
+
 
 fn main() {
-    let desktop = Desktop::new();
+    let mut desktop = Desktop::new();
+    desktop.init();
+
+    loop {
+        thread::sleep(Duration::from_millis(1000));
+    }
 }

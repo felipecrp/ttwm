@@ -1,23 +1,29 @@
-use crate::{api::win::WinWindowManager, container::Container, geometry::GeometryContainer, layout::Layout, window::{Window, WindowManager}, workspace::Workspace};
+use crate::{api::win::WinWindowManager, geometry::GeometryContainer, layout::Layout, window::{Window, WindowManager}, window_event::WindowEventListener, workspace::Workspace};
 
 
 pub struct Desktop {
     workspaces: Vec<Workspace>,
-    window_manager: WinWindowManager
+    window_manager: WinWindowManager,
+    // window_event_listener: WindowEventListener,
 }
 
 impl Desktop {
     pub fn new() -> Self {
-        let mut desktop = Self {
+        let desktop = Self {
             workspaces: vec![Workspace::new()],
             window_manager: WinWindowManager::new()
         };
 
-        desktop.init();
+        // WindowEventListener 
         desktop
     }
     
-    fn init(&mut self) -> () {
+    pub fn test(&self) -> () {}
+
+    pub fn init(&mut self) -> () {
+        self.window_manager.register(WindowEventListener {});
+        self.window_manager.evt(&|evt| self.test());
+
         let windows = self.window_manager.get_windows();
         for window in windows {
             self.add(window);
@@ -42,6 +48,14 @@ impl Desktop {
         container.update(); 
     }
 }
+
+impl Default for Desktop {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 
 // let windows = window_manager.get_windows();
 // for window in windows {
