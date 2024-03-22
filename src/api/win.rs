@@ -1,6 +1,9 @@
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::mem::zeroed;
+use std::rc::Rc;
+use std::string;
 use std::sync::{Mutex, OnceLock};
 
 use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::*};
@@ -9,8 +12,9 @@ use windows::Win32::UI::Accessibility::*;
 
 use crate::window_event::{WindowEventListener};
 use crate::geometry::Shape;
-use crate::window::{Window, WindowManager};
+use crate::window::{self, Window, WindowManager};
 
+#[derive(Debug)]
 pub struct WinWindow {
     window_handler: WindowHandler,
     geometry: Shape
@@ -38,7 +42,7 @@ impl Window for WinWindow {
     }
     
     fn mve(&self, geo: (i32, i32, i32, i32)) -> () {
-        self.window_handler.mve(geo);
+        // self.window_handler.mve(geo);
     }
 }
 
@@ -58,6 +62,7 @@ impl From<WindowHandler> for WinWindow {
 }
 
 
+#[derive(Debug)]
 pub struct WindowHandler(HWND);
 
 impl WindowHandler {
@@ -115,7 +120,6 @@ impl WindowHandler {
     }
     
     fn mve(&self, geo: (i32, i32, i32, i32)) -> () {
-        // unsafe { MoveWindow(self.0, geo.0, geo.1, geo.2, geo.3, true) }; 
         unsafe { let _ = SetWindowPos(
             self.0, HWND_TOP, geo.0, geo.1, geo.2, geo.3, 
             SWP_FRAMECHANGED|SWP_NOACTIVATE|SWP_NOCOPYBITS|SWP_NOSENDCHANGING|SWP_ASYNCWINDOWPOS
@@ -129,28 +133,57 @@ impl From<HWND> for WindowHandler {
     }
 }
 
-static WINDOW_EVENT_LISTENER: OnceLock<WindowEventListener> = OnceLock::new();
-// static WINDOW_EVENT_LISTENER: Mutex<WindowEventListener> = Mutex::new();
 
+// static WINDOW_EVENT_LISTENER: OnceLock<WindowEventListener> = OnceLock::new();
+struct WinWindowEventListener<'a> {
+    win: Option<&'a WinWindowManager>
+}
+
+impl<'a> WinWindowEventListener<'a> {
+    fn on_window_event(&self) {
+        match self.win {
+            Some(win) => win.on_window_event("Event"),
+            None => ()
+        };
+    }
+
+    // fn register(&mut self, win: RefCell<&'a WinWindowManager>) -> () {
+    //     self.win = Some(win);
+    // }
+}
+
+// static mut WINDOW_EVENT_LISTENER: Mutex<&WinWindowEventListener> = Mutex::new(&WinWindowEventListener { win: None });
+static WINDOW_EVENT_LISTENER: Mutex<WinWindowEventListener> = Mutex::new(WinWindowEventListener { win: None });
+// static WINDOW_EVENT_LISTENER: OnceLock<WinWindowEventListener> = OnceLock::new();
+// static mut WINDOW_EVENT_LISTENER: Option<&'static WinWindowEventListener> = None;
+
+#[derive(Debug)]
 pub struct WinWindowManager {
-    pub windows: HashMap<WindowHandler, WinWindow>
+    pub windows: HashMap<WindowHandler, WinWindow>,
+    window_event_listener: WindowEventListener
 }
 
 impl WinWindowManager {
+
     pub fn new() -> Self {
-        Self {
-            windows: HashMap::<WindowHandler, WinWindow>::new()
-        }
+        let win_window_manager = Self {
+            windows: HashMap::<WindowHandler, WinWindow>::new(),
+            window_event_listener: WindowEventListener::new() 
+        };
+
+        let window_event_listener = WinWindowEventListener { win: Some(&win_window_manager) };
+        // WINDOW_EVENT_LISTENER.lock().unwrap().win = Some(&win_window_manager);
+        window_event_listener.on_window_event();
+
+
+        win_window_manager
     }
 
-    pub fn register(&self, window_event_listener: WindowEventListener) -> &WindowEventListener {
-        let listener = WINDOW_EVENT_LISTENER.get_or_init(|| window_event_listener);
-        listener
-    }
-
-    pub fn evt(&self, f: &dyn Fn(i32) -> ()) -> () {
+    fn on_window_event(&self, s: &str) -> () {
+        println!("{s}");
     }
 }
+
 
 impl WindowManager for WinWindowManager {
     fn get_windows(&self) -> Vec<Box<dyn Window>> {

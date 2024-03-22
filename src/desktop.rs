@@ -3,15 +3,15 @@ use crate::{api::win::WinWindowManager, geometry::GeometryContainer, layout::Lay
 
 pub struct Desktop {
     workspaces: Vec<Workspace>,
-    window_manager: WinWindowManager,
-    // window_event_listener: WindowEventListener,
+    window_manager: WinWindowManager
 }
 
 impl Desktop {
     pub fn new() -> Self {
+        let window_manager = WinWindowManager::new();
         let desktop = Self {
             workspaces: vec![Workspace::new()],
-            window_manager: WinWindowManager::new()
+            window_manager: window_manager,
         };
 
         // WindowEventListener 
@@ -21,9 +21,6 @@ impl Desktop {
     pub fn test(&self) -> () {}
 
     pub fn init(&mut self) -> () {
-        self.window_manager.register(WindowEventListener {});
-        self.window_manager.evt(&|evt| self.test());
-
         let windows = self.window_manager.get_windows();
         for window in windows {
             self.add(window);
@@ -49,17 +46,4 @@ impl Desktop {
     }
 }
 
-impl Default for Desktop {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
-
-
-// let windows = window_manager.get_windows();
-// for window in windows {
-//     println!("{}", window.get_name());
-//     workspace.add_window(window);
-//     // thread::sleep(time::Duration::from_millis(1000));
-// }
